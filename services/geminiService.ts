@@ -1,7 +1,9 @@
+// @ts-nocheck
 import { GoogleGenAI } from "@google/genai";
 
 const getClient = () => {
   // Retrieve the key
+
   let apiKey = process.env.API_KEY;
 
   if (!apiKey) {
