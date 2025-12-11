@@ -1,5 +1,0 @@
-{
-  "name": "Gemini ChainForge",
-  "description": "A visual prompt-chaining studio inspired by LangChain. Build, visualize, and execute sequential AI workflows using Google Gemini 2.5 Flash.",
-  "requestFramePermissions": []
-}

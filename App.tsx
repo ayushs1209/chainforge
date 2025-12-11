@@ -1,78 +1,100 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { ChainStep, ExecutionLog, ChainStatus, VariableContext } from './types';
-import { StepEditor } from './components/StepEditor';
-import { ExecutionView } from './components/ExecutionView';
-import { generateStepContent, interpolatePrompt } from './services/geminiService';
-import { Plus, Play, RotateCcw, Box, Layers, Settings2, Github, Key } from 'lucide-react';
+import { useState, useCallback, useRef } from "react";
+import { ChainStep, ExecutionLog, ChainStatus, VariableContext } from "./types";
+import { StepEditor } from "./components/StepEditor";
+import { ExecutionView } from "./components/ExecutionView";
+import {
+  generateStepContent,
+  interpolatePrompt,
+} from "./services/geminiService";
+import {
+  Plus,
+  Play,
+  RotateCcw,
+  Box,
+  Layers,
+  Settings2,
+  Github,
+  Key,
+} from "lucide-react";
 
 const INITIAL_STEPS: ChainStep[] = [
   {
-    id: '1',
-    name: 'Topic Expansion',
-    description: 'Generates a detailed outline based on a simple topic.',
-    promptTemplate: 'Generate a detailed blog post outline for the topic: "{topic}". Include 3 main sections.',
-    outputKey: 'outline'
+    id: "1",
+    name: "Topic Expansion",
+    description: "Generates a detailed outline based on a simple topic.",
+    promptTemplate:
+      'Generate a detailed blog post outline for the topic: "{topic}". Include 3 main sections.',
+    outputKey: "outline",
   },
   {
-    id: '2',
-    name: 'Intro Writer',
-    description: 'Writes an introduction based on the outline.',
-    promptTemplate: 'Write a catchy introduction paragraph for a blog post with this outline:\n\n{outline}',
-    outputKey: 'introduction'
+    id: "2",
+    name: "Intro Writer",
+    description: "Writes an introduction based on the outline.",
+    promptTemplate:
+      "Write a catchy introduction paragraph for a blog post with this outline:\n\n{outline}",
+    outputKey: "introduction",
   },
   {
-    id: '3',
-    name: 'Tweet Generator',
-    description: 'Creates a tweet to promote the post.',
-    promptTemplate: 'Based on this introduction, write a viral tweet with hashtags:\n\n{introduction}',
-    outputKey: 'tweet'
-  }
+    id: "3",
+    name: "Tweet Generator",
+    description: "Creates a tweet to promote the post.",
+    promptTemplate:
+      "Based on this introduction, write a viral tweet with hashtags:\n\n{introduction}",
+    outputKey: "tweet",
+  },
 ];
 
 function App() {
   const [steps, setSteps] = useState<ChainStep[]>(INITIAL_STEPS);
-  const [variables, setVariables] = useState<VariableContext>({ topic: 'The Future of AI in Web Development' });
+  const [variables, setVariables] = useState<VariableContext>({
+    topic: "The Future of AI in Web Development",
+  });
   const [logs, setLogs] = useState<ExecutionLog[]>([]);
   const [status, setStatus] = useState<ChainStatus>(ChainStatus.IDLE);
-  const [activeTab, setActiveTab] = useState<'build' | 'run'>('build');
-  
+  const [activeTab, setActiveTab] = useState<"build" | "run">("build");
+
   // Ref to stop execution if needed
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleUpdateStep = (updatedStep: ChainStep) => {
-    setSteps(prev => prev.map(s => s.id === updatedStep.id ? updatedStep : s));
+    setSteps((prev) =>
+      prev.map((s) => (s.id === updatedStep.id ? updatedStep : s))
+    );
   };
 
   const handleDeleteStep = (id: string) => {
-    setSteps(prev => prev.filter(s => s.id !== id));
+    setSteps((prev) => prev.filter((s) => s.id !== id));
   };
 
   const handleAddStep = () => {
     const newStep: ChainStep = {
       id: crypto.randomUUID(),
-      name: 'New Step',
-      description: 'Describe what this step does',
-      promptTemplate: 'Write prompt here using {previousOutputKey}...',
-      outputKey: `output_${steps.length + 1}`
+      name: "New Step",
+      description: "Describe what this step does",
+      promptTemplate: "Write prompt here using {previousOutputKey}...",
+      outputKey: `output_${steps.length + 1}`,
     };
     setSteps([...steps, newStep]);
   };
 
-  const handleMoveStep = (index: number, direction: 'up' | 'down') => {
-    if (direction === 'up' && index === 0) return;
-    if (direction === 'down' && index === steps.length - 1) return;
-    
+  const handleMoveStep = (index: number, direction: "up" | "down") => {
+    if (direction === "up" && index === 0) return;
+    if (direction === "down" && index === steps.length - 1) return;
+
     const newSteps = [...steps];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    [newSteps[index], newSteps[targetIndex]] = [newSteps[targetIndex], newSteps[index]];
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    [newSteps[index], newSteps[targetIndex]] = [
+      newSteps[targetIndex],
+      newSteps[index],
+    ];
     setSteps(newSteps);
   };
 
   const runChain = useCallback(async () => {
     setStatus(ChainStatus.RUNNING);
     setLogs([]);
-    setActiveTab('run'); // Auto switch to run tab
-    
+    setActiveTab("run"); // Auto switch to run tab
+
     let currentContext = { ...variables };
     abortControllerRef.current = new AbortController();
 
@@ -83,21 +105,21 @@ function App() {
           stepId: step.id,
           stepName: step.name,
           inputContext: { ...currentContext }, // Snapshot
-          promptUsed: '',
-          output: '',
+          promptUsed: "",
+          output: "",
           timestamp: Date.now(),
-          status: 'running'
+          status: "running",
         };
 
-        setLogs(prev => [...prev, logEntry]);
+        setLogs((prev) => [...prev, logEntry]);
 
         // Interpolate
         const prompt = interpolatePrompt(step.promptTemplate, currentContext);
-        
+
         // Update log with real prompt
-        setLogs(prev => {
-            const last = prev[prev.length - 1];
-            return [...prev.slice(0, -1), { ...last, promptUsed: prompt }];
+        setLogs((prev) => {
+          const last = prev[prev.length - 1];
+          return [...prev.slice(0, -1), { ...last, promptUsed: prompt }];
         });
 
         // Execute Gemini
@@ -107,21 +129,27 @@ function App() {
         currentContext[step.outputKey] = output;
 
         // Update log to completed
-        setLogs(prev => {
-            const last = prev[prev.length - 1];
-            return [...prev.slice(0, -1), { ...last, output, status: 'completed' }];
+        setLogs((prev) => {
+          const last = prev[prev.length - 1];
+          return [
+            ...prev.slice(0, -1),
+            { ...last, output, status: "completed" },
+          ];
         });
 
         // Small delay for UX visual
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 500));
       }
       setStatus(ChainStatus.COMPLETED);
     } catch (error) {
       console.error(error);
-      setLogs(prev => {
-          if (prev.length === 0) return prev;
-          const last = prev[prev.length - 1];
-          return [...prev.slice(0, -1), { ...last, status: 'error', error: String(error) }];
+      setLogs((prev) => {
+        if (prev.length === 0) return prev;
+        const last = prev[prev.length - 1];
+        return [
+          ...prev.slice(0, -1),
+          { ...last, status: "error", error: String(error) },
+        ];
       });
       setStatus(ChainStatus.ERROR);
     }
@@ -133,12 +161,14 @@ function App() {
   };
 
   // Extract all unique variables needed from templates (simple regex)
-  const requiredVariables = Array.from(new Set(
-    steps.flatMap(s => {
-      const matches = s.promptTemplate.match(/{(\w+)}/g);
-      return matches ? matches.map(m => m.replace(/[{}]/g, '')) : [];
-    })
-  )).filter(v => !steps.some(s => s.outputKey === v)); // Filter out variables that are generated by steps
+  const requiredVariables = Array.from(
+    new Set(
+      steps.flatMap((s) => {
+        const matches = s.promptTemplate.match(/{(\w+)}/g);
+        return matches ? matches.map((m) => m.replace(/[{}]/g, "")) : [];
+      })
+    )
+  ).filter((v) => !steps.some((s) => s.outputKey === v)); // Filter out variables that are generated by steps
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
@@ -150,148 +180,165 @@ function App() {
           </div>
           <div>
             <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-              Gemini ChainForge
+              ChainForge
             </h1>
-            <p className="text-xs text-slate-500">Sequential AI Workflow Builder</p>
+            <p className="text-xs text-slate-500">
+              Sequential AI Workflow Builder
+            </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-4">
-             {!process.env.API_KEY && (
-                 <div className="flex items-center gap-2 text-amber-500 bg-amber-950/30 px-3 py-1.5 rounded border border-amber-900">
-                    <Key size={14} />
-                    <span className="text-xs font-medium">Missing API Key</span>
-                 </div>
-             )}
-            <a href="#" className="text-slate-500 hover:text-white transition-colors">
-                <Github size={20} />
-            </a>
+          {!process.env.API_KEY && (
+            <div className="flex items-center gap-2 text-amber-500 bg-amber-950/30 px-3 py-1.5 rounded border border-amber-900">
+              <Key size={14} />
+              <span className="text-xs font-medium">Missing API Key</span>
+            </div>
+          )}
+          <a
+            href="https://github.com/ayushs1209/chainforge"
+            className="text-slate-500 hover:text-white transition-colors"
+            target="_blank"
+          >
+            <Github size={20} />
+          </a>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="flex-1 container mx-auto p-6 max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
         {/* Left Panel: Configuration */}
         <div className="lg:col-span-5 flex flex-col gap-6">
-            
-            {/* Context/Input Variables Section */}
-            <div className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
-                <div className="bg-slate-800 px-4 py-3 border-b border-slate-700 flex items-center gap-2">
-                    <Box size={18} className="text-blue-400"/>
-                    <h2 className="font-semibold text-slate-200">Initial Variables</h2>
-                </div>
-                <div className="p-4 space-y-4">
-                    {requiredVariables.length === 0 ? (
-                        <p className="text-sm text-slate-500 italic">No external variables detected in prompts.</p>
-                    ) : (
-                        requiredVariables.map(key => (
-                            <div key={key}>
-                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{key}</label>
-                                <input 
-                                    type="text" 
-                                    value={variables[key] || ''}
-                                    onChange={e => setVariables({...variables, [key as string]: e.target.value})}
-                                    className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white focus:border-blue-500 focus:outline-none"
-                                    placeholder={`Enter value for {${key}}`}
-                                />
-                            </div>
-                        ))
-                    )}
-                    {/* Allow adding custom variables manually if regex misses something or for testing */}
-                    <div className="pt-2 border-t border-slate-700/50">
-                        <details className="text-xs text-slate-500 cursor-pointer">
-                            <summary className="hover:text-slate-300">Advanced: JSON Context View</summary>
-                             <pre className="mt-2 bg-slate-950 p-2 rounded overflow-x-auto text-slate-400">
-                                {JSON.stringify(variables, null, 2)}
-                             </pre>
-                        </details>
-                    </div>
-                </div>
+          {/* Context/Input Variables Section */}
+          <div className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
+            <div className="bg-slate-800 px-4 py-3 border-b border-slate-700 flex items-center gap-2">
+              <Box size={18} className="text-blue-400" />
+              <h2 className="font-semibold text-slate-200">
+                Initial Variables
+              </h2>
+            </div>
+            <div className="p-4 space-y-4">
+              {requiredVariables.length === 0 ? (
+                <p className="text-sm text-slate-500 italic">
+                  No external variables detected in prompts.
+                </p>
+              ) : (
+                requiredVariables.map((key) => (
+                  <div key={key}>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">
+                      {key}
+                    </label>
+                    <input
+                      type="text"
+                      value={variables[key] || ""}
+                      onChange={(e) =>
+                        setVariables({
+                          ...variables,
+                          [key as string]: e.target.value,
+                        })
+                      }
+                      className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white focus:border-blue-500 focus:outline-none"
+                      placeholder={`Enter value for {${key}}`}
+                    />
+                  </div>
+                ))
+              )}
+              {/* Allow adding custom variables manually if regex misses something or for testing */}
+              <div className="pt-2 border-t border-slate-700/50">
+                <details className="text-xs text-slate-500 cursor-pointer">
+                  <summary className="hover:text-slate-300">
+                    Advanced: JSON Context View
+                  </summary>
+                  <pre className="mt-2 bg-slate-950 p-2 rounded overflow-x-auto text-slate-400">
+                    {JSON.stringify(variables, null, 2)}
+                  </pre>
+                </details>
+              </div>
+            </div>
+          </div>
+
+          {/* Chain Builder */}
+          <div className="flex-1 flex flex-col min-h-[400px]">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Settings2 size={20} className="text-indigo-400" />
+                Chain Steps
+              </h2>
+              <button
+                onClick={handleAddStep}
+                className="text-xs flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded transition-colors border border-slate-700"
+              >
+                <Plus size={14} /> Add Step
+              </button>
             </div>
 
-            {/* Chain Builder */}
-            <div className="flex-1 flex flex-col min-h-[400px]">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold flex items-center gap-2">
-                        <Settings2 size={20} className="text-indigo-400" />
-                        Chain Steps
-                    </h2>
-                    <button 
-                        onClick={handleAddStep}
-                        className="text-xs flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded transition-colors border border-slate-700"
-                    >
-                        <Plus size={14} /> Add Step
-                    </button>
-                </div>
-                
-                <div className="space-y-4">
-                    {steps.map((step, idx) => (
-                        <StepEditor
-                            key={step.id}
-                            step={step}
-                            index={idx}
-                            totalSteps={steps.length}
-                            onUpdate={handleUpdateStep}
-                            onDelete={handleDeleteStep}
-                            onMove={handleMoveStep}
-                        />
-                    ))}
-                </div>
+            <div className="space-y-4">
+              {steps.map((step, idx) => (
+                <StepEditor
+                  key={step.id}
+                  step={step}
+                  index={idx}
+                  totalSteps={steps.length}
+                  onUpdate={handleUpdateStep}
+                  onDelete={handleDeleteStep}
+                  onMove={handleMoveStep}
+                />
+              ))}
             </div>
+          </div>
         </div>
 
         {/* Right Panel: Execution & Action */}
         <div className="lg:col-span-7 flex flex-col h-[calc(100vh-8rem)] sticky top-24">
-             {/* Action Bar */}
-             <div className="mb-4 flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg">
-                <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-slate-200">
-                        {status === ChainStatus.RUNNING ? 'Running Chain...' : 'Ready'}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                        {steps.length} steps configured
-                    </span>
-                </div>
-                <div className="flex gap-3">
-                    <button
-                        onClick={resetLogs}
-                        disabled={status === ChainStatus.RUNNING || logs.length === 0}
-                        className="p-3 text-slate-400 hover:bg-slate-700 rounded-lg disabled:opacity-30 transition-colors"
-                        title="Reset Logs"
-                    >
-                        <RotateCcw size={20} />
-                    </button>
-                    <button
-                        onClick={runChain}
-                        disabled={status === ChainStatus.RUNNING || steps.length === 0}
-                        className={`
+          {/* Action Bar */}
+          <div className="mb-4 flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg">
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-slate-200">
+                {status === ChainStatus.RUNNING ? "Running Chain..." : "Ready"}
+              </span>
+              <span className="text-xs text-slate-500">
+                {steps.length} steps configured
+              </span>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={resetLogs}
+                disabled={status === ChainStatus.RUNNING || logs.length === 0}
+                className="p-3 text-slate-400 hover:bg-slate-700 rounded-lg disabled:opacity-30 transition-colors"
+                title="Reset Logs"
+              >
+                <RotateCcw size={20} />
+              </button>
+              <button
+                onClick={runChain}
+                disabled={status === ChainStatus.RUNNING || steps.length === 0}
+                className={`
                             flex items-center gap-2 px-6 py-3 rounded-lg font-bold text-white shadow-lg transition-all
-                            ${status === ChainStatus.RUNNING 
-                                ? 'bg-slate-700 cursor-not-allowed opacity-50' 
-                                : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 hover:shadow-indigo-500/25'
+                            ${
+                              status === ChainStatus.RUNNING
+                                ? "bg-slate-700 cursor-not-allowed opacity-50"
+                                : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 hover:shadow-indigo-500/25"
                             }
                         `}
-                    >
-                        {status === ChainStatus.RUNNING ? (
-                            <><Box className="animate-spin" size={20} /> Processing...</>
-                        ) : (
-                            <><Play size={20} /> Run Chain</>
-                        )}
-                    </button>
-                </div>
-             </div>
+              >
+                {status === ChainStatus.RUNNING ? (
+                  <>
+                    <Box className="animate-spin" size={20} /> Processing...
+                  </>
+                ) : (
+                  <>
+                    <Play size={20} /> Run Chain
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
 
-             {/* Results Area */}
-             <div className="flex-1 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-inner overflow-hidden flex flex-col">
-                 <ExecutionView 
-                    status={status}
-                    logs={logs}
-                    onReset={resetLogs}
-                 />
-             </div>
+          {/* Results Area */}
+          <div className="flex-1 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-inner overflow-hidden flex flex-col">
+            <ExecutionView status={status} logs={logs} onReset={resetLogs} />
+          </div>
         </div>
-
       </main>
     </div>
   );
